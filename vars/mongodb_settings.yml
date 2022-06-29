@@ -1,0 +1,8 @@
+mongo_connection:
+  mongodb_host: '10.254.231.19'
+  mongodb_port: '27017'
+  mongodb_authdb: 'ansible_store01'
+  mongodb_user: 'ansible_user01'
+  mongodb_password: 'H@1r$h03$'
+  mongodb_database: 'ansible_store01'
+  mongodb_collection: 'nsxt_missing_path_checker'

@@ -1,0 +1,55 @@
+---
+- hosts: "{{ cli_nsxm_group | default('nsxm_global') }}"
+  connection: local
+  gather_facts: no
+
+  vars:
+    federation_role: global
+
+  vars_files:
+    - ../../vars/passwords.yml
+    - ../../vars/mongodb_settings.yml
+
+  tasks:
+
+    - name: Set password
+      set_fact:
+        password: "{{ passwords[inventory_hostname][username] }}"
+
+
+    - name: Retrieve the defined domains ( regions ) for the NSX-T manager
+      vmware.ansible_for_nsxt.nsxt_policy_domain_info:
+        hostname: "{{ inventory_hostname }}"
+        "username": "{{ username }}"
+        "password": "{{ password }}"
+        validate_certs: False
+        federation_role: global
+      register: nsxt_domain_info
+      delegate_to: 127.0.0.1
+
+    - name: Just pull out the ids from the nsxt_domain_info data
+      set_fact:
+        domain_ids: "{{ nsxt_domain_info | json_query('results[].id')}}"
+
+    - name: Loop using these domain paths to get all of the group paths
+      vmware.ansible_for_nsxt.nsxt_policy_group_info:
+        hostname: "{{ inventory_hostname }}"
+        "username": "{{ username }}"
+        "password": "{{ password }}"
+        validate_certs: False
+        federation_role: global
+        domain_id: "{{ domain_id }}"
+        #page_size: 2
+      register: nsxt_all_group_info
+      delegate_to: 127.0.0.1
+      loop: "{{ domain_ids }}"
+      loop_control:
+        loop_var: domain_id
+
+    - name: Just pull out the ids from the nsxt_domain_info data
+      set_fact:
+        group_paths: "{{ nsxt_all_group_info | json_query('results[].results[].path')}}"
+
+    - name: Write path list to mongodb
+      set_fact:
+        write_result: "{{ [mongo_connection, group_paths, 'group_paths' ] | write_to_mongodb}}"
